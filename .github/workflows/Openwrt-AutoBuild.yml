@@ -22,11 +22,13 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+   
     name: Build ${{matrix.target}}
     strategy:
       fail-fast: false
       matrix:
         target: ["${{ github.event.client_payload.target }}"]
+       
     steps:
     - name: Checkout
       uses: actions/checkout@main
