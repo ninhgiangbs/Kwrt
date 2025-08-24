@@ -22,13 +22,11 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-   
     name: Build ${{matrix.target}}
     strategy:
       fail-fast: false
       matrix:
-        target: ["${{ github.event.client_payload.target }}"]
-       
+        target: [ ${{ github.event.client_payload.target }} ]
     steps:
     - name: Checkout
       uses: actions/checkout@main
@@ -136,7 +134,7 @@ jobs:
       run: |
         set -x
         TAG_INFO="$(curl -gs -H 'Content-Type: application/json' \
-   -X POST -d '{ "query": "query {repository(owner: \"openwrt\", name: \"openwrt\") {refs(refPrefix: \"refs/tags/\", first: 4, orderBy: {field: TAG_COMMIT_DATE, direction: DESC}) {nodes {name target { ... on Tag {tagger {date}}}}}}}"}' https://api.github.com/graphql)"
+           -X POST -d '{ "query": "query {repository(owner: \"openwrt\", name: \"openwrt\") {refs(refPrefix: \"refs/tags/\", first: 4, orderBy: {field: TAG_COMMIT_DATE, direction: DESC}) {nodes {name target { ... on Tag {tagger {date}}}}}}}"}' https://api.github.com/graphql)"
         TAG_DATE="$( echo ${TAG_INFO} | jq -r '.data.repository.refs.nodes[] | select(.name | startswith("v24")) | .target.tagger.date' | head -n 1)"
         if [[ $(( ($(date +%s) - $(date -d "$TAG_DATE" +%s)) / 86400 )) -lt 20 ]]; then
         REPO_BRANCH="$( echo ${TAG_INFO} | jq -r '.data.repository.refs.nodes[].name' | grep v24 | head -n 1)"
@@ -196,11 +194,6 @@ jobs:
         export -f git_clone_path
         cp -rf devices/common/. openwrt/
         cp -rf devices/${{matrix.target}}/. openwrt/
-        # Add custom feed for AmneziaWG
-        cd openwrt
-        echo "src-git awg https://github.com/amnezia-vpn/amneziawg-openwrt.git" >> feeds.conf.default
-        ./scripts/feeds update -a
-        ./scripts/feeds install -a -p awg
         cp -rf devices openwrt/
         cd openwrt
         chmod +x devices/common/$DIY_SH
@@ -216,6 +209,11 @@ jobs:
           /bin/bash "devices/${{matrix.target}}/$DIY_SH"
         fi
         cp -Rf ./diy/* ./ || true
+        # Add custom feed for AmneziaWG
+        cd openwrt
+        echo "src-git awg https://github.com/amnezia-vpn/amneziawg-openwrt.git" >> feeds.conf.default
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a -p awg
     - name: Apply patches
       run: |
         cd openwrt
@@ -263,7 +261,6 @@ jobs:
         mixkey: ${{ matrix.target }}
         clean: ${{ contains(github.event.action, 'nocache') }}
         prefix: ${{ github.workspace }}/openwrt
-   
     - name: Check space usage
       run: |
         shopt -s extglob
